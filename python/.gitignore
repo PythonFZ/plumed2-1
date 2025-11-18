@@ -1,12 +1,13 @@
-/*
-# in this directory, only accept source, Makefile and README
+# Ignore everything by default
+*
+
+# Allow source files and configuration
 !/.gitignore
-!/*.pxd
-!/*.py
-!/*.pyx
-!/Makefile
-!/README
-!/module.type
-!/test
-!/MANIFEST.in
+!/pyproject.toml
+!/hatch_build.py
 !/README.rst
+# Allow plumed package directory
+!/plumed/
+!/plumed/__init__.py
+!/plumed/_core.pyx
+!/plumed/_cplumed.pxd

@@ -26,7 +26,7 @@
 
 # cython: binding=True
 
-cimport cplumed  # This imports information from pxd file - including contents of this file here causes name clashes
+cimport plumed._cplumed as cplumed  # This imports information from pxd file - including contents of this file here causes name clashes
 
 import array
 import re
