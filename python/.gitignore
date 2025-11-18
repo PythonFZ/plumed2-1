@@ -5,6 +5,7 @@
 !/.gitignore
 !/pyproject.toml
 !/hatch_build.py
+!/Makefile
 !/README.rst
 # Allow plumed package directory
 !/plumed/

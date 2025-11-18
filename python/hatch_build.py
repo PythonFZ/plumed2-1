@@ -26,6 +26,7 @@ Custom build hooks for hatchling to compile Cython extensions and bundle PLUMED 
 import os
 import platform
 import shutil
+import subprocess
 import sysconfig
 from pathlib import Path
 
@@ -62,15 +63,68 @@ class CustomBuildHook(BuildHookInterface):
         if self.target_name != "wheel":
             return
 
+        # Build PLUMED from source if not already built
+        self._build_plumed()
+
         # Compile Cython extension
         self._compile_cython_extension()
 
-        # Bundle PLUMED binaries if available
+        # Bundle PLUMED binaries
         self._bundle_binaries(build_data)
 
         # Set wheel tag to be platform-specific
         build_data["infer_tag"] = True
         build_data["pure_python"] = False
+
+    def _build_plumed(self) -> None:
+        """Build PLUMED from source if not already built."""
+        root = Path(self.root).resolve()
+        plumed_root = (root / "..").resolve()
+        install_dir = plumed_root / "bin"
+
+        # Check if already built
+        if platform.system() == "Darwin":
+            kernel_lib = install_dir / "lib" / "libplumedKernel.dylib"
+        else:
+            kernel_lib = install_dir / "lib" / "libplumedKernel.so"
+
+        if kernel_lib.exists():
+            print(f"PLUMED already built at {install_dir}")
+            return
+
+        # Check if we're in the PLUMED source tree
+        configure_script = plumed_root / "configure"
+        if not configure_script.exists():
+            print("WARNING: Not in PLUMED source tree, skipping build")
+            print(f"  Expected configure at: {configure_script}")
+            return
+
+        print("Building PLUMED from source...")
+        print(f"  Source directory: {plumed_root}")
+        print(f"  Install directory: {install_dir}")
+
+        # Configure
+        configure_cmd = [
+            str(configure_script),
+            f"--prefix={install_dir}",
+            "--disable-doc",
+            "--disable-python",  # We're building our own Python interface
+        ]
+
+        print(f"Running: {' '.join(configure_cmd)}")
+        subprocess.run(configure_cmd, cwd=str(plumed_root), check=True)
+
+        # Build
+        import multiprocessing
+        num_jobs = multiprocessing.cpu_count()
+        print(f"Running: make -j{num_jobs}")
+        subprocess.run(["make", f"-j{num_jobs}"], cwd=str(plumed_root), check=True)
+
+        # Install
+        print("Running: make install")
+        subprocess.run(["make", "install"], cwd=str(plumed_root), check=True)
+
+        print(f"PLUMED built and installed to {install_dir}")
 
     def _compile_cython_extension(self) -> None:
         """Compile the Cython extension module."""
